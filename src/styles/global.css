@@ -1,0 +1,40 @@
+@font-face {
+  font-family: 'Cirrus Cumulus';
+  src: url('../assets/fonts/CirrusCumulus.woff') format('woff');
+  font-display: block;
+}
+
+body {
+  margin: 0;
+  background: #ebebeb;
+}
+
+.prism-field {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.prism-field canvas {
+  display: block;
+}
+
+.hero-title__text {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  margin: 0;
+  font-family: 'Cirrus Cumulus', serif;
+  font-weight: normal;
+  font-size: clamp(2.5rem, 9vw, 7.5rem);
+  line-height: 1;
+  color: #000000;
+}
+
+.hero-title__line {
+  display: block;
+}

@@ -1,0 +1,81 @@
+{
+  "canvas": {
+    "width": 900,
+    "height": 640,
+    "margin": 16
+  },
+  "spiralEase": 1.6,
+  "sampleStep": 2,
+  "drawSpeed": 500,
+  "sliders": {
+    "count": { "label": "circles", "default": 79, "range": [20, 500] },
+    "maxRadius": { "label": "max radius", "default": 9, "range": [10, 120] },
+    "minRadius": { "label": "min radius", "default": 4, "range": [2, 30] },
+    "gap": { "label": "gap", "default": 13, "range": [0, 30] },
+    "startSweep": { "label": "start sweep", "default": 35, "range": [0, 270] },
+    "spiralTurns": { "label": "spiral turns", "default": 30, "range": [0.5, 2.5] },
+    "spiralTightness": { "label": "spiral tightness", "default": 50, "range": [0.6, 0.05] },
+    "flow": { "label": "flow", "default": 60, "range": [0, 1] },
+    "thickness": { "label": "thickness", "default": 30, "range": [0.5, 6] }
+  },
+  "growth": {
+    "minSweepDeg": 30,
+    "maxSweepDeg": 220,
+    "idealSweepDeg": 120,
+    "shrinkBias": 0.4,
+    "terminalRadius": 0.15,
+    "branchMarginDeg": 12,
+    "stemPool": 6,
+    "childStepFalloff": 0.65,
+    "spiralJitter": 0.3,
+    "branchEveryDeg": 70,
+    "fillReachScale": 2,
+    "fillSteps": 3,
+    "maxLineRatio": 4,
+    "minCluster": 3,
+    "lineWeight": 0.6,
+    "growWeight": 0.8,
+    "minShapeStrokes": 2,
+    "minCurlScale": 4,
+    "shapeSteps": 3,
+    "blendRadius": 0.8,
+    "blendShare": 0.45,
+    "spiralBlendMax": 0.6,
+    "blendHandle": 0.38,
+    "strokeClearance": 0.5,
+    "forkIgnore": 14
+  },
+  "growthSliders": {
+    "depth": { "label": "branch depth", "default": 75, "range": [0, 4] },
+    "branching": { "label": "branching", "default": 100, "range": [0, 1] },
+    "mirror": { "label": "mirrored pairs", "default": 12, "range": [0, 1] },
+    "reverse": { "label": "s-curve bias", "default": 45, "range": [0, 1] },
+    "maxSteps": { "label": "stroke length", "default": 45, "range": [2, 9] },
+    "reach": { "label": "reach", "default": 20, "range": [0, 80] },
+    "tolerance": { "label": "coherence", "default": 80, "range": [2, 0.35] }
+  },
+  "letters": {
+    "text": "Temple",
+    "margin": 40,
+    "tries": 400,
+    "minSproutRadius": 6,
+    "clearance": 2,
+    "pocketDepth": 0.5,
+    "sliders": {
+      "size": { "label": "letter size", "default": 50, "range": [120, 420] },
+      "spread": { "label": "spread", "default": 40, "range": [20, 220] },
+      "sprouts": { "label": "sprout spacing", "default": 50, "range": [160, 30] }
+    }
+  },
+  "hover": {
+    "label": "reveal on hover",
+    "default": true,
+    "sliders": {
+      "radius": { "label": "hover radius", "default": 14, "range": [20, 240] }
+    }
+  },
+  "newShapes": {
+    "label": "new shapes",
+    "default": true
+  }
+}
