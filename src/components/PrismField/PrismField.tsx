@@ -2,13 +2,15 @@ import { useEffect, useRef, type RefObject } from 'react'
 import * as CANNON from 'cannon-es'
 import * as THREE from 'three'
 import { BOOK_SIZE, createBook, type BookSize } from '../Book/Book.ts'
+import { FACE_SPHERE_RADIUS, createFaceSphere } from '../FaceSphere/FaceSphere.ts'
 import { MAP_SIZE, createMap, type MapSize } from '../Map/Map.ts'
+import { UNICORN_SIZE, loadUnicorn } from '../Unicorn/Unicorn.ts'
 import { createTitlePlane } from './titlePlane.ts'
 
 type Size = [number, number, number]
 
 const PX_PER_UNIT = 100
-const PRISM_COUNT = 5
+const PRISM_COUNT = 3
 const SIDE_RANGE: [number, number] = [0.8, 2.8]
 const SPAWN_RADIUS = 0.5
 const WALL_SEGMENTS = 20
@@ -44,12 +46,14 @@ type OpenableItem = {
   openSize: [number, number]
   setOpen: (amount: number) => void
   update?: (dt: number) => void
+  release?: () => THREE.Quaternion
 }
 
 type Openable = {
   item: OpenableItem
   prism: Prism
   click?: (point: THREE.Vector3) => void
+  hitBounds?: boolean
 }
 
 type PrismFieldProps = {
@@ -128,13 +132,18 @@ function PrismField({ titleRef }: PrismFieldProps) {
       return mesh
     }
 
-    const addPrism = (size: Size, boundsColor: number, object: THREE.Object3D = boxObject(size)) => {
+    const addPrism = (
+      size: Size,
+      boundsColor: number,
+      object: THREE.Object3D = boxObject(size),
+      shape: CANNON.Shape = new CANNON.Box(new CANNON.Vec3(size[0] / 2, size[1] / 2, size[2] / 2)),
+    ) => {
       scene.add(object)
 
       const direction = new THREE.Vector3().randomDirection().multiplyScalar(Math.random() * SPAWN_RADIUS)
       const body = new CANNON.Body({
         mass: 1,
-        shape: new CANNON.Box(new CANNON.Vec3(size[0] / 2, size[1] / 2, size[2] / 2)),
+        shape,
         position: new CANNON.Vec3(direction.x, direction.y, direction.z),
         linearDamping: 0.2,
         angularDamping: 0.5,
@@ -189,6 +198,25 @@ function PrismField({ titleRef }: PrismFieldProps) {
     ]
     for (let i = 1; i < PRISM_COUNT; i++) addPrism(randomSize(), BOUNDS_COLOR)
 
+    const face = createFaceSphere(FACE_SPHERE_RADIUS * scale)
+    disposables.push(face)
+    const faceDiameter = 2 * face.radius
+    openables.push({
+      item: face,
+      prism: addPrism([faceDiameter, faceDiameter, faceDiameter], OPENABLE_BOUNDS_COLOR, face.object, new CANNON.Sphere(face.radius)),
+    })
+
+    let unmounted = false
+    loadUnicorn(UNICORN_SIZE * scale).then((unicorn) => {
+      if (unmounted) return unicorn.dispose()
+      disposables.push(unicorn)
+      openables.push({
+        item: unicorn,
+        prism: addPrism(unicorn.size, OPENABLE_BOUNDS_COLOR, unicorn.object),
+        hitBounds: true,
+      })
+    })
+
     const focus = {
       state: 'free' as 'free' | 'opening' | 'open' | 'closing',
       target: null as Openable | null,
@@ -209,9 +237,13 @@ function PrismField({ titleRef }: PrismFieldProps) {
     }
     const releaseFocus = (target: Openable) => {
       const { body } = target.prism
-      const { position, quaternion } = focus.from
+      const { position } = focus.from
+      const quaternion = focus.from.quaternion.clone()
+      const kept = target.item.release?.()
+      if (kept) quaternion.multiply(kept)
       body.position.set(position.x, position.y, position.z)
       body.quaternion.set(quaternion.x, quaternion.y, quaternion.z, quaternion.w)
+      target.prism.object.quaternion.copy(quaternion)
       body.velocity.setZero()
       body.angularVelocity.setZero()
       body.force.setZero()
@@ -235,7 +267,7 @@ function PrismField({ titleRef }: PrismFieldProps) {
       object.quaternion.slerpQuaternions(focus.from.quaternion, rig.quaternion, glide)
       object.scale.setScalar(1 + (fit - 1) * glide)
       item.setOpen(open)
-      if (SHOW_BOUNDS) prism.bounds.setFromObject(object)
+      prism.bounds.setFromObject(object)
     }
 
     const observer = new ResizeObserver(resize)
@@ -249,17 +281,17 @@ function PrismField({ titleRef }: PrismFieldProps) {
 
     const openableAtPointer = () => {
       raycaster.setFromCamera(pointer, camera)
-      const hits = raycaster.intersectObjects(
-        openables.map(({ prism }) => prism.object),
-        true,
-      )
-      const hit = hits.find((h) => h.object instanceof THREE.Mesh)
-      if (!hit) return null
-      const openable = openables.find(({ prism }) => {
-        for (let o: THREE.Object3D | null = hit.object; o; o = o.parent) if (o === prism.object) return true
-        return false
-      })
-      return openable ? { openable, point: hit.point } : null
+      let nearest: { openable: Openable; point: THREE.Vector3; distance: number } | null = null
+      for (const openable of openables) {
+        const { prism } = openable
+        const point = openable.hitBounds
+          ? raycaster.ray.intersectBox(prism.bounds, new THREE.Vector3())
+          : (raycaster.intersectObject(prism.object, true).find((hit) => hit.object instanceof THREE.Mesh)?.point ?? null)
+        if (!point) continue
+        const distance = point.distanceTo(raycaster.ray.origin)
+        if (!nearest || distance < nearest.distance) nearest = { openable, point, distance }
+      }
+      return nearest
     }
     const onPointerMove = (e: PointerEvent) => {
       pointer.set((e.clientX / window.innerWidth) * 2 - 1, -(e.clientY / window.innerHeight) * 2 + 1)
@@ -335,7 +367,7 @@ function PrismField({ titleRef }: PrismFieldProps) {
         const { body, object, bounds } = prism
         object.position.set(body.position.x, body.position.y, body.position.z)
         object.quaternion.set(body.quaternion.x, body.quaternion.y, body.quaternion.z, body.quaternion.w)
-        if (SHOW_BOUNDS) bounds.setFromObject(object)
+        bounds.setFromObject(object)
       }
 
       if (focus.target) {
@@ -354,6 +386,7 @@ function PrismField({ titleRef }: PrismFieldProps) {
     })
 
     return () => {
+      unmounted = true
       renderer.setAnimationLoop(null)
       observer.disconnect()
       window.removeEventListener('pointermove', onPointerMove)
